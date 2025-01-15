@@ -1,0 +1,83 @@
+From 38cb96a0a63155ac155067b89777296e48cb480f Mon Sep 17 00:00:00 2001
+From: KUAN <dragonisflying911.com>
+Date: Mon, 14 Oct 2024 17:39:06 +0000
+Subject: [PATCH] Add NR_revstr system call
+
+---
+ arch/x86/entry/syscalls/syscall_64.tbl |  2 +-
+ include/linux/syscalls.h               |  1 +
+ kernel/sys.c                           | 35 ++++++++++++++++++++++++++
+ 3 files changed, 37 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/entry/syscalls/syscall_64.tbl b/arch/x86/entry/syscalls/syscall_64.tbl
+index c84d12608cd2..c578c53ed58c 100644
+--- a/arch/x86/entry/syscalls/syscall_64.tbl
++++ b/arch/x86/entry/syscalls/syscall_64.tbl
+@@ -372,7 +372,7 @@
+ 448	common	process_mrelease	sys_process_mrelease
+ 449	common	futex_waitv		sys_futex_waitv
+ 450	common	set_mempolicy_home_node	sys_set_mempolicy_home_node
+-
++451     common  NR_revstr               sys_NR_revstr
+ #
+ # Due to a historical design error, certain syscalls are numbered differently
+ # in x32 as compared to native x86_64.  These syscalls have numbers 512-547.
+diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+index a34b0f9a9972..36da9d7cf571 100644
+--- a/include/linux/syscalls.h
++++ b/include/linux/syscalls.h
+@@ -1255,6 +1255,7 @@ asmlinkage long sys_old_readdir(unsigned int, struct old_linux_dirent __user *,
+ asmlinkage long sys_gethostname(char __user *name, int len);
+ asmlinkage long sys_uname(struct old_utsname __user *);
+ asmlinkage long sys_olduname(struct oldold_utsname __user *);
++asmlinkage long sys_NR_revstr(char __user *str, size_t n);
+ #ifdef __ARCH_WANT_SYS_OLD_GETRLIMIT
+ asmlinkage long sys_old_getrlimit(unsigned int resource, struct rlimit __user *rlim);
+ #endif
+diff --git a/kernel/sys.c b/kernel/sys.c
+index 5fd54bf0e886..e13f811f0993 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -2790,4 +2790,39 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
+ 		return -EFAULT;
+ 	return 0;
+ }
++
++SYSCALL_DEFINE2(NR_revstr, char __user *, str, size_t, n)
++{
++    char *k_str;
++    int i, j;
++    char temp;
++
++    k_str = kmalloc(n + 1, GFP_KERNEL);
++    if (!k_str)
++        return -ENOMEM;
++
++    if (copy_from_user(k_str, str, n)) {
++        kfree(k_str);
++        return -EFAULT;
++    }
++    k_str[n] = '\0';
++
++    printk(KERN_INFO "The origin string: %s\n", k_str);
++
++    for (i = 0, j = n - 1; i < j; i++, j--) {
++        temp = k_str[i];
++        k_str[i] = k_str[j];
++        k_str[j] = temp;
++    }
++
++    printk(KERN_INFO "The reversed string: %s\n", k_str);
++
++    if (copy_to_user(str, k_str, n)) {
++        kfree(k_str);
++        return -EFAULT;
++    }
++
++    kfree(k_str);
++    return 0;
++}
+ #endif /* CONFIG_COMPAT */
+-- 
+2.43.0
+

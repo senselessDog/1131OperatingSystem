@@ -1,0 +1,4 @@
+Part1:
+https://phoenixnap.com/kb/build-linux-kernel
+Part2:
+https://youtu.be/Kn6D7sH7Fts?si=GI2tS_z0ltA2zpji
